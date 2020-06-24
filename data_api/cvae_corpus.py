@@ -4,6 +4,7 @@ import pickle
 import numpy as np
 from collections import Counter
 from gensim.models.wrappers import FastText
+from pprint import pprint
 
 
 class KGCVAECorpus:
@@ -33,29 +34,30 @@ class KGCVAECorpus:
         test_file_path = os.path.join(dir_path, test_file_name)
         valid_file_path = os.path.join(dir_path, valid_file_name)
 
-        with open(train_file_path, 'r') as reader:
+        with open(train_file_path, 'r', encoding='utf-8') as reader:
             train_corpus_data = json.load(reader)
 
-        with open(test_file_path, 'r') as reader:
+        with open(test_file_path, 'r', encoding='utf-8') as reader:
             test_corpus_data = json.load(reader)
 
-        with open(valid_file_path, 'r') as reader:
+        with open(valid_file_path, 'r', encoding='utf-8') as reader:
             valid_corpus_data = json.load(reader)
 
-        self.train_corpus = self.process(train_corpus_data)
-        self.test_corpus = self.process(test_corpus_data)
-        self.valid_corpus = self.process(valid_corpus_data)
+        self.train_corpus = self._process(train_corpus_data)
+        self.test_corpus = self._process(test_corpus_data)
+        self.valid_corpus = self._process(valid_corpus_data)
 
         exists_load_vocab = config.get('load_vocab', False)
         if exists_load_vocab:
-            self.load_vocab(config['vocab_path'])
+            self._load_vocab(config['vocab_path'])
         else:
-            self.build_vocab(config['max_vocab_count'])
-            self.save_vocab(config['vocab_path'])
+            self._build_vocab(config['max_vocab_count'])
+            self._save_vocab(config['vocab_path'])
 
-        self.load_word2vec(config['word2vec_path'], config['word2vec_path'])
+        self._load_word2vec(config['word2vec_path'], config['word2vec_path'])
 
-    def process(self, json_data):
+    @staticmethod
+    def _process(json_data):
         new_dialog = []
         new_meta = []
         new_utts = []
@@ -91,7 +93,7 @@ class KGCVAECorpus:
             new_meta.append(meta)
         return new_dialog, new_meta, new_utts
 
-    def load_vocab(self, vocab_path):
+    def _load_vocab(self, vocab_path):
         with open(vocab_path, 'rb') as reader:
             vocab_file_dict = pickle.load(reader)
         self.vocab = vocab_file_dict['vocab']
@@ -102,7 +104,7 @@ class KGCVAECorpus:
         self.dialog_act_vocab = vocab_file_dict['dialog_act_vocab']
         self.rev_dialog_act_vocab = vocab_file_dict['rev_dialog_act_vocab']
 
-    def build_vocab(self, max_vocab_count):
+    def _build_vocab(self, max_vocab_count):
         # 대화록 단어
         all_words = []
         for tokens in self.train_corpus[self.utt_id]:
@@ -129,7 +131,7 @@ class KGCVAECorpus:
         self.dialog_act_vocab = [senti_label for senti_label, count in Counter(all_sentiments).most_common()]
         self.rev_dialog_act_vocab = {senti_label: idx for idx, senti_label in enumerate(self.dialog_act_vocab)}
 
-    def save_vocab(self, vocab_path):
+    def _save_vocab(self, vocab_path):
         with open(vocab_path, 'wb') as writer:
             pickle.dump(
                 {
@@ -142,7 +144,7 @@ class KGCVAECorpus:
                 }, writer
             )
 
-    def load_word2vec(self, word2vec_path, word2vec_dim):
+    def _load_word2vec(self, word2vec_path, word2vec_dim):
         if not os.path.exists(word2vec_path):
             return
 
@@ -162,3 +164,23 @@ class KGCVAECorpus:
                     oov_cnt += 1
                     vec = np.random.randn(word2vec_dim) * 0.1
             self.word2vec.append(vec)
+
+    def get_dialog_corpus(self):
+        # 토크나이징 된 단어들을 토큰 아이디로 변경
+        def _word_to_idx(data):
+            result = []
+            for dialog in data:
+                temp = []
+                for tokenized_sent, caller, senti_label in dialog:
+                    senti_label_idx = self.rev_dialog_act_vocab[senti_label] if senti_label is not None else None
+                    temp.append(([self.rev_vocab.get(token, self.unk_id) for token in tokenized_sent], senti_label_idx))
+                result.append(temp)
+            return result
+        print(self.dialog_id)
+        print(self.train_corpus)
+        print(self.train_corpus[self.dialog_id])
+        return {
+            'train': _word_to_idx(self.train_corpus[self.dialog_id]),
+            'test': _word_to_idx(self.test_corpus[self.dialog_id]),
+            'valid': _word_to_idx(self.valid_corpus[self.dialog_id])
+        }

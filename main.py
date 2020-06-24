@@ -9,8 +9,8 @@ MODEL_CONFIG_PATH = 'config/cvae_model_kor.json'
 
 
 def main():
-    corpus_config = utils.load_config(CORPUS_CONFIG_PATH)
-    KGCVAECorpus(config=corpus_config)
+    corpus = KGCVAECorpus(config=utils.load_config(CORPUS_CONFIG_PATH))
+    corpus.get_dialog_corpus()
 
 
 if __name__ == '__main__':
