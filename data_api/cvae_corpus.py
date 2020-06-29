@@ -10,9 +10,11 @@ from pprint import pprint
 class KGCVAECorpus:
     reserved_token_for_gen = ['<pad>', '<unk>', '<sos>', '<eos>']
     reserved_token_for_dialog = ['<s>', '<d>', '</s>']
-    utt_id = 2
-    meta_id = 1
+
+    # corpus 리스크의 정보 위치
     dialog_id = 0
+    meta_id = 1
+    utt_id = 2
 
     vocab = None
     rev_vocab = None
@@ -119,16 +121,20 @@ class KGCVAECorpus:
 
         # 대화록 토픽
         all_topics = [topic for _, _, topic in self.train_corpus[self.meta_id]]
-        self.topic_vocab = [topic for topic, count in Counter(all_topics).most_common()]
+        # 토픽이 등장 빈도수 순서로 저장되어 있는 리스트
+        self.topic_vocab = [topic for topic, _ in Counter(all_topics).most_common()]
+        # 토픽에 인덱스가 부여된 딕셔너리
         self.rev_topic_vocab = {topic: idx for idx, topic in enumerate(self.topic_vocab)}
 
         # 대화록 감정분석
         all_sentiments = []
         for dialog in self.train_corpus[self.dialog_id]:
             all_sentiments.extend(
-                [senti_label for caller, tokenized_sent, senti_label in dialog if senti_label is not None]
+                [senti_label for _, _, senti_label in dialog if senti_label is not None]
             )
-        self.dialog_act_vocab = [senti_label for senti_label, count in Counter(all_sentiments).most_common()]
+        # 감정 레이블이 등장 빈도수 순서로 저장되어 있는 리스트
+        self.dialog_act_vocab = [senti_label for senti_label, _ in Counter(all_sentiments).most_common()]
+        # 감정 레이블에 인덱스가 부여된 딕셔너리
         self.rev_dialog_act_vocab = {senti_label: idx for idx, senti_label in enumerate(self.dialog_act_vocab)}
 
     def _save_vocab(self, vocab_path):
@@ -176,11 +182,20 @@ class KGCVAECorpus:
                     temp.append(([self.rev_vocab.get(token, self.unk_id) for token in tokenized_sent], senti_label_idx))
                 result.append(temp)
             return result
-        print(self.dialog_id)
-        print(self.train_corpus)
-        print(self.train_corpus[self.dialog_id])
         return {
             'train': _word_to_idx(self.train_corpus[self.dialog_id]),
             'test': _word_to_idx(self.test_corpus[self.dialog_id]),
             'valid': _word_to_idx(self.valid_corpus[self.dialog_id])
+        }
+
+    def get_meta_corpus(self):
+        def _word_to_idx(data):
+            result = []
+            for vec_a_meta, vec_b_meta, topic in data:
+                result.append((vec_a_meta, vec_b_meta, self.rev_topic_vocab[topic]))
+            return result
+        return {
+            'train': _word_to_idx(self.train_corpus[self.meta_id]),
+            'test': _word_to_idx(self.test_corpus[self.meta_id]),
+            'valid': _word_to_idx(self.valid_corpus[self.meta_id])
         }
