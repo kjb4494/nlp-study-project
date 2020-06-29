@@ -14,7 +14,7 @@ class CVAEDataset(Dataset):
         self.data_lens = [len(line) for line in data]
         self.pad_token_idx = 0
         self.utt_per_case = config['utt_per_case']
-        self.max_utt_size = config['max_utt_len']
+        self.max_tokenized_sent_size = config['max_utt_len']
         self.exist_inference = config.get('inference', False)
         self.indexes = list(np.argsort(self.data_lens))
         self.data = []
@@ -29,6 +29,7 @@ class CVAEDataset(Dataset):
                 end_idx_offset_end = data_lens + 1
             else:
                 end_idx_offset_start = 2
+                # 각 대화 데이터 수
                 end_idx_offset_end = data_lens
 
             for end_idx_offset in range(end_idx_offset_start, end_idx_offset_end):
@@ -38,6 +39,16 @@ class CVAEDataset(Dataset):
                 cut_row = data_point[start_idx:end_idx]
                 in_row = cut_row[0:-1]
                 out_row = cut_row[-1]
-                print(out_row)
-                out_utt, out_floor, out_feat = out_row
+                vec_tokenized_sent, vec_caller, vec_senti_label = out_row
                 data_item['topics'] = torch.LongTensor([topic])
+                context_utts = np.zeros((self.utt_per_case, self.max_tokenized_sent_size))
+                padded_utt_pairs = [self.slice_and_pad(vec_tokenized_sent)]
+
+    def slice_and_pad(self, vec_tokenized_sent, do_pad=True):
+        utt_size = len(vec_tokenized_sent)
+        if utt_size >= self.max_tokenized_sent_size:
+            return vec_tokenized_sent[self.max_tokenized_sent_size-1] + [vec_tokenized_sent[-1]], self.max_tokenized_sent_size
+        elif do_pad:
+            return vec_tokenized_sent + [self.pad_token_idx] * (self.max_tokenized_sent_size-utt_size), utt_size
+        else:
+            return vec_tokenized_sent, utt_size
