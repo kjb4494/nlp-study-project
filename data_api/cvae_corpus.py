@@ -179,7 +179,7 @@ class KGCVAECorpus:
                 temp = []
                 for tokenized_sent, caller, senti_label in dialog:
                     senti_label_idx = self.rev_dialog_act_vocab[senti_label] if senti_label is not None else None
-                    temp.append(([self.rev_vocab.get(token, self.unk_id) for token in tokenized_sent], senti_label_idx))
+                    temp.append(([self.rev_vocab.get(token, self.unk_id) for token in tokenized_sent], caller, senti_label_idx))
                 result.append(temp)
             return result
         return {
