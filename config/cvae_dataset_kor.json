@@ -1,4 +1,4 @@
 {
-  "max_utt_len": 30,
-  "utt_per_case": 10
+  "max_tokenized_sent_size": 30,
+  "tokenized_sent_per_case": 10
 }
