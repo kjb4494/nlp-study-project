@@ -13,7 +13,6 @@ def get_cvae_collate(tokenized_sent_per_case, max_tokenized_sent_size):
         vec_floors = np.zeros((batch_size, tokenized_sent_per_case))
         vec_outs = np.zeros((batch_size, max_tokenized_sent_size))
 
-        print(cvae_data_list)
         for idx, item in enumerate(cvae_data_list):
             vec_context[idx] = item['context_utts']
             vec_floors[idx] = item['floors']

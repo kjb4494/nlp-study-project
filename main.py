@@ -4,6 +4,8 @@ from torch.utils.data import DataLoader
 from data_api.cvae_corpus import KGCVAECorpus
 from data_api.dataset import CVAEDataset
 from data_api.data_loader import get_cvae_collate
+from model.cvae import CVAEModel
+
 
 CORPUS_CONFIG_PATH = 'config/cvae_corpus_kor.json'
 DATASET_CONFIG_PATH = 'config/cvae_dataset_kor.json'
@@ -41,7 +43,10 @@ def main():
 
     trainer_config = utils.load_config(TRAINER_CONFIG_PATH)
     model_config = utils.load_config(MODEL_CONFIG_PATH)
-    
+
+    target_model = CVAEModel(data_config=dataset_config, model_config=model_config, vocab_class=corpus)
+    target_model.cpu()
+
 
 if __name__ == '__main__':
     main()

@@ -79,6 +79,7 @@ class CVAEModel(nn.Module):
             bidirectional=False
         )
 
+        # nn.Linear args --> input size, output size, bias(default true)
         self.attribute_fc1 = nn.Sequential(
             nn.Linear(self.da_embed_size, self.da_hidden_size),
             nn.Tanh()
@@ -92,7 +93,7 @@ class CVAEModel(nn.Module):
         self.prior_mulogvar_net = nn.Sequential(
             nn.Linear(cond_embedding_size, np.maximum(self.latent_size * 2, 100)),
             nn.Tanh(),
-            nn.Linear(np.maximum(self.latent_size *2, 100), self.latent_size * 2)
+            nn.Linear(np.maximum(self.latent_size * 2, 100), self.latent_size * 2)
         )
 
         # BOW Loss Function
@@ -115,3 +116,22 @@ class CVAEModel(nn.Module):
             dec_input_size = gen_input_size + self.da_embed_size
         else:
             dec_input_size = gen_input_size
+
+        # Decoder
+        if self.num_layer > 1:
+            self.dec_init_state_net = nn.ModuleList(
+                [nn.Linear(dec_input_size, self.dec_cell_size) for _ in range(self.num_layer)]
+            )
+        else:
+            self.dec_init_state_net = nn.Linear(dec_input_size, self.dec_cell_size)
+        dec_input_embedding_size = self.embed_size
+        if self.use_hcf:
+            dec_input_embedding_size += self.da_hidden_size
+        self.dec_cell = nn.GRU(
+            input_size=dec_input_embedding_size,
+            hidden_size=self.dec_cell_size,
+            num_layers=self.num_layer,
+            dropout=1 - self.keep_prob,
+            bidirectional=False
+        )
+        self.dec_cell_project = nn.Linear(self.dec_cell_size, self.vocab_size)

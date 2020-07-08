@@ -20,7 +20,7 @@
   "sent_cell_size": 300,
   "dec_cell_size": 400,
 
-  "max_utt_len": 30,
+  "max_tokenized_sent_size": 30,
   "num_layer": 1,
 
   "bow_hidden_size": 400,
