@@ -5,6 +5,7 @@ from data_api.cvae_corpus import KGCVAECorpus
 from data_api.dataset import CVAEDataset
 from data_api.data_loader import get_cvae_collate
 from model.cvae import CVAEModel
+from trainer.trainer import CVAETrainer
 
 
 CORPUS_CONFIG_PATH = 'config/cvae_corpus_kor.json'
@@ -46,6 +47,8 @@ def main():
 
     target_model = CVAEModel(data_config=dataset_config, model_config=model_config, vocab_class=corpus)
     target_model.cpu()
+    cvae_trainer = CVAETrainer(trainer_config, target_model)
+    output_reports = cvae_trainer.experiment(train_loader, valid_loader, test_loader)
 
 
 if __name__ == '__main__':
