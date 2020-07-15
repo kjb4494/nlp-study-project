@@ -42,6 +42,8 @@ def main():
     test_loader = DataLoader(test_set, batch_size=100, shuffle=False, collate_fn=cvae_collate)
     valid_loader = DataLoader(valid_set, batch_size=100, shuffle=False, collate_fn=cvae_collate)
 
+    print(vars(train_loader))
+
     trainer_config = utils.load_config(TRAINER_CONFIG_PATH)
     model_config = utils.load_config(MODEL_CONFIG_PATH)
 

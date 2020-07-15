@@ -11,4 +11,11 @@ class CVAELoss(nn.Module):
 
     # 상속
     def forward(self, model_output, model_input, current_step, is_train, is_valid):
-        pass
+        out_token = model_output["out_token"]
+        out_das = model_output["out_das"]
+        da_logit = model_output["da_logit"]
+        bow_logit = model_output["bow_logit"]
+        dec_out = model_output["dec_out"]
+
+        return self.calculate_loss(dec_out, bow_logit, da_logit, out_token,
+                                   out_das, model_output, is_train, is_valid, current_step)

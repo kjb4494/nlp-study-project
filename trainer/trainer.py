@@ -1,16 +1,10 @@
-from abc import ABC, abstractmethod
-from typing import Dict, Iterable, List, Optional, Union
-from datetime import datetime
-from torch.optim.optimizer import Optimizer
-from torch.utils.data import DataLoader
+
 from torch.optim import Adam
-from torch.optim.optimizer import Optimizer
 from torch.optim.lr_scheduler import StepLR
 from trainer.criterion import CVAELoss
 import os
 import tqdm
 import torch
-import torch.nn as nn
 import time
 
 

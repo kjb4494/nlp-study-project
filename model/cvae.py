@@ -1,4 +1,3 @@
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as fnn
@@ -61,7 +60,7 @@ class CVAEModel(nn.Module):
                 input_size=self.embed_size,
                 hidden_size=self.sent_cell_size,
                 num_layers=self.num_layer,
-                dropout=1-self.keep_prob,
+                dropout=1 - self.keep_prob,
                 bidirectional=True
             )
         else:
@@ -135,3 +134,31 @@ class CVAEModel(nn.Module):
             bidirectional=False
         )
         self.dec_cell_project = nn.Linear(self.dec_cell_size, self.vocab_size)
+
+    def feed_train(self, feed_dict):
+        is_train_multiple = feed_dict.get('is_train_multiple', False)
+        num_samples = feed_dict['num_samples']
+
+        # _to_device_context
+        context_lens = feed_dict['context_lens'].to(self.device).squeeze(-1)
+        input_contexts = feed_dict['vec_context'].to(self.device)
+        floors = feed_dict['vec_floors'].to(self.device)
+        topics = feed_dict['topics'].to(self.device).squeeze(-1)
+        my_profile = feed_dict['my_profile'].to(self.device)
+        ot_profile = feed_dict['ot_profile'].to(self.device)
+
+        # _to_device_output
+        out_tok = feed_dict['vec_outs'].to(self.device)
+        out_das = feed_dict['out_das'].to(self.device).squeeze(-1)
+        output_lens = feed_dict['out_lens'].to(self.device).squeeze(-1)
+
+        output_embedded = self.word_embedding(out_tok)
+        # if self.sent_type == 'bi-rnn':
+        #     output_embedding, _ =
+
+    # arg: torch DataLoader
+    def forward(self, feed_dict):
+        is_train = feed_dict['is_train']
+        is_train_multiple = feed_dict.get('is_train_multiple', False)
+        is_test_multi_da = feed_dict.get('is_test_multi_da', False)
+        num_samples = feed_dict['num_samples']
