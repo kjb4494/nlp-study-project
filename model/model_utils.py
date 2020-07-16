@@ -14,7 +14,7 @@ def dynamic_rnn(cell, inputs, sequence_length, max_len, init_state=None, output_
     inv_ix = len_ix.clone()
     inv_ix[len_ix] = torch.arange(0, len(len_ix)).type_as(inv_ix)
 
-    valid_num = torch.sign()
+    valid_num = torch.sign(sorted_lens).long().sum().item()
     return None, None
 
 
