@@ -15,6 +15,13 @@ def dynamic_rnn(cell, inputs, sequence_length, max_len, init_state=None, output_
     inv_ix[len_ix] = torch.arange(0, len(len_ix)).type_as(inv_ix)
 
     valid_num = torch.sign(sorted_lens).long().sum().item()
+    zero_num = inputs.size(0) - valid_num
+
+    # 이 부분 의미가 뭐냐?
+    sorted_inputs = inputs[len_ix].contiguous()
+    if init_state is not None:
+        sorted_init_state = init_state[:, len_ix].contiguous()
+        
     return None, None
 
 
