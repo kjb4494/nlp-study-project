@@ -1,8 +1,6 @@
 import utils
-from torch.utils.data import DataLoader
 from data_api.dataset import CVAEDataset
 from module_test.cvae_corpus_test import get_corpus
-from data_api.data_loader import get_cvae_collate
 
 
 def test_main():
@@ -51,19 +49,6 @@ def get_dataset(corpus_config_path, dataset_config_path):
         config=dataset_config
     )
     return train_set, test_set, valid_set
-
-
-def get_data_loader(corpus_config_path, dataset_config_path):
-    dataset_config = utils.load_config(dataset_config_path)
-    cvae_collate = get_cvae_collate(
-        tokenized_sent_per_case=dataset_config['tokenized_sent_per_case'],
-        max_tokenized_sent_size=dataset_config['max_tokenized_sent_size']
-    )
-    train_set, test_set, valid_set = get_dataset(corpus_config_path, dataset_config_path)
-    train_loader = DataLoader(train_set, batch_size=100, shuffle=True, collate_fn=cvae_collate)
-    test_loader = DataLoader(test_set, batch_size=100, shuffle=False, collate_fn=cvae_collate)
-    valid_loader = DataLoader(valid_set, batch_size=100, shuffle=False, collate_fn=cvae_collate)
-    return train_loader, test_loader, valid_loader
 
 
 if __name__ == '__main__':
