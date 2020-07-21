@@ -1,4 +1,3 @@
-
 import numpy as np
 
 import torch.nn
@@ -7,6 +6,13 @@ from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 import torch
 import torch.nn as nn
+
+
+def sample_gaussian(mu, logvar):
+    epsilon = logvar.new_empty(logvar.size()).normal_()
+    std = torch.exp(0.5 * logvar)
+    z = mu + std * epsilon
+    return z
 
 
 def dynamic_rnn(cell, inputs, sequence_length, max_len, init_state=None, output_fn=None):
@@ -21,7 +27,7 @@ def dynamic_rnn(cell, inputs, sequence_length, max_len, init_state=None, output_
     sorted_inputs = inputs[len_ix].contiguous()
     if init_state is not None:
         sorted_init_state = init_state[:, len_ix].contiguous()
-        
+
     return None, None
 
 
