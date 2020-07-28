@@ -101,6 +101,7 @@ class CVAEModelInfo:
         )
 
         # Y Loss Function
+        self.da_project = None
         if self.use_hcf:
             self.da_project = nn.Sequential(
                 nn.Linear(gen_input_size, self.act_hidden_size),

@@ -47,7 +47,7 @@ def main():
     trainer_config = utils.load_config(TRAINER_CONFIG_PATH)
     model_config = utils.load_config(MODEL_CONFIG_PATH)
 
-    target_model = CVAEModel(data_config=dataset_config, model_config=model_config, vocab_class=corpus)
+    target_model = CVAEModel(model_config=model_config, vocab_class=corpus)
     target_model.cpu()
     cvae_trainer = CVAETrainer(trainer_config, target_model)
     output_reports = cvae_trainer.experiment(train_loader, valid_loader, test_loader)
