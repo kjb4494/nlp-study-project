@@ -6,7 +6,7 @@ import torch.nn.functional as fnn
 from model.model_utils import get_bi_rnn_encode, dynamic_rnn, sample_gaussian
 
 
-class CVAEModelInfo:
+class CVAEStaticInfo:
     def __init__(self, model_config, vocab_class):
         self.vocab = vocab_class.vocab
         self.rev_vocab = vocab_class.rev_vocab
@@ -132,108 +132,29 @@ class CVAEModelInfo:
         )
         self.dec_cell_project = nn.Linear(self.dec_cell_size, self.vocab_size)
 
-    def get_converted_info_to_device_context(self, feed_dict):
-        context_lens = feed_dict['context_lens'].to(self.device).squeeze(-1)
-        input_contexts = feed_dict['vec_context'].to(self.device)
-        floors = feed_dict['vec_floors'].to(self.device)
-        topics = feed_dict['topics'].to(self.device).squeeze(-1)
-        my_profile = feed_dict['my_profile'].to(self.device)
-        ot_profile = feed_dict['ot_profile'].to(self.device)
+    def get_dec_input_test(self, local_batch_size, cond_embedding, latent_samples):
+        gen_inputs = [torch.cat([cond_embedding, latent_sample], 1) for latent_sample in latent_samples]
+        bow_logit = self.bow_project(gen_inputs[0])
 
-        return context_lens, input_contexts, floors, topics, my_profile, ot_profile
-
-    def get_converted_info_to_device_output(self, feed_dict):
-        out_tok = feed_dict['vec_outs'].to(self.device)
-        out_das = feed_dict['out_das'].to(self.device).squeeze(-1)
-        output_lens = feed_dict['out_lens'].to(self.device).squeeze(-1)
-
-        return out_tok, out_das, output_lens
-
-    def get_encoder_state(self, input_contexts, floors, is_train,
-                          context_lens, max_dialog_len, max_seq_len):
-
-        input_contexts = input_contexts.view(-1, max_seq_len)
-        input_embedded = self.word_embedding(input_contexts)
-
-        # only use bi-rnn
-        if self.sent_type == 'bi-rnn':
-            input_embedding, sent_size = get_bi_rnn_encode(
-                input_embedded,
-                self.bi_sent_cell,
-                self.max_tokenized_sent_size
-            )
-        else:
-            raise ValueError("unk sent_type. select one in [bow, rnn, bi-rnn]")
-
-        # reshape input into dialogs
-        input_embedding = input_embedding.view(-1, max_dialog_len, sent_size)
-
-        if self.keep_prob < 1.0:
-            input_embedding = fnn.dropout(input_embedding, 1 - self.keep_prob, is_train)
-
-        # floors are already converted as one-hot
-        floor_one_hot = floors.new_zeros((floors.numel(), 2), dtype=torch.float)
-        floor_one_hot.data.scatter_(1, floors.view(-1, 1), 1)
-        floor_one_hot = floor_one_hot.view(-1, max_dialog_len, 2)
-
-        joint_embedding = torch.cat([input_embedding, floor_one_hot], 2)
-
-        _, enc_last_state = dynamic_rnn(
-            self.enc_cell, joint_embedding,
-            sequence_length=context_lens,
-            max_len=self.max_tokenized_sent_size
-        )
-
-        if self.num_layer > 1:
-            enc_last_state = torch.cat([_ for _ in torch.unbind(enc_last_state)], 1)
-        else:
-            enc_last_state = enc_last_state.squeeze(0)
-
-        return enc_last_state
-
-    def get_sample_from_recog_network(self, local_batch_size, cond_embedding, num_samples, out_das,
-                                      output_embedding, is_train_multiple):
         if self.use_hcf:
-            attribute_embedding = self.da_embedding(out_das)
-            attribute_fc1 = self.attribute_fc1(attribute_embedding)
-
-            ctrl_attribute_embeddings = {
-                da: self.da_embedding(torch.ones(local_batch_size, dtype=torch.long, device=self.device) * idx)
-                for idx, da in enumerate(self.da_vocab)
-            }
-            ctrl_attribute_fc1 = {k: self.attribute_fc1(v) for (k, v) in ctrl_attribute_embeddings.items()}
-
-            recog_input = torch.cat([cond_embedding, output_embedding, attribute_fc1], 1)
-            ctrl_recog_inputs = {
-                k: torch.cat([cond_embedding, output_embedding, v], 1) for (k, v) in ctrl_attribute_fc1.items()
-            } if is_train_multiple else {}
+            da_logits = [self.da_project(gen_input) for gen_input in gen_inputs]
+            da_probs = [fnn.softmax(da_logit, dim=1) for da_logit in da_logits]
+            pred_attribute_embeddings = [torch.matmul(da_prob, self.da_embedding.weight) for da_prob in da_probs]
+            dec_inputs = [
+                torch.cat((gen_input, pred_attribute_embeddings[i]), 1) for i, gen_input in enumerate(gen_inputs)
+            ]
         else:
-            attribute_embedding = None
-            ctrl_attribute_embeddings = None
-            recog_input = torch.cat([cond_embedding, output_embedding], 1)
-            ctrl_recog_inputs = {
-                da: torch.cat([cond_embedding, output_embedding], 1) for idx, da in enumerate(self.da_vocab)
-            } if is_train_multiple else {}
+            da_logits = [gen_input.new_zeros(local_batch_size, self.da_size) for gen_input in gen_inputs]
+            dec_inputs = gen_inputs
+            pred_attribute_embeddings = []
 
-        recog_mulogvar = self.recog_mulogvar_net(recog_input)
-        recog_mu, recog_logvar = torch.chunk(recog_mulogvar, 2, 1)
-
-        ctrl_latent_samples = {}
-        ctrl_recog_mus = {}
-        ctrl_recog_logvars = {}
-        ctrl_recog_mulogvars = {}
-
-        if is_train_multiple:
-            latent_samples = [sample_gaussian(recog_mu, recog_logvar) for _ in range(num_samples)]
-            ctrl_recog_mulogvars = {k: self.recog_mulogvar_net(v) for (k, v) in ctrl_recog_inputs.items()}
-            for k in ctrl_recog_mulogvars.keys():
-                ctrl_recog_mus[k], ctrl_recog_logvars[k] = torch.chunk(ctrl_recog_mulogvars[k], 2, 1)
-
-            ctrl_latent_samples = {
-                k: sample_gaussian(ctrl_recog_mus[k], ctrl_recog_logvars[k]) for k in ctrl_recog_mulogvars.keys()
-            }
+        # decoder
+        if self.num_layer > 1:
+            dec_init_states = [
+                [self.dec_init_state_net[i](dec_input) for i in range(self.num_layer)] for dec_input in dec_inputs
+            ]
+            dec_init_states = [torch.stack(dec_init_state) for dec_init_state in dec_init_states]
         else:
-            latent_samples = [sample_gaussian(recog_mu, recog_logvar)]
+            dec_init_states = [self.dec_init_state_net(dec_input).unsqueeze(0) for dec_input in dec_inputs]
 
-        return latent_samples, recog_mu, recog_logvar, recog_mulogvar, ctrl_latent_samples, \
-               ctrl_recog_mus, ctrl_recog_logvars, ctrl_recog_mulogvars, attribute_embedding, ctrl_attribute_embeddings
+        return da_logits, bow_logit, dec_inputs, dec_init_states, pred_attribute_embeddings

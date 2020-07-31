@@ -9,7 +9,22 @@ def kg_cvae_model():
         vocab_class=get_corpus(corpus_config_path=CORPUS_CONFIG_PATH)
     )
     topic_embedding = cvae_model.topic_embedding
+    da_embedding = cvae_model.da_embedding
+    word_embedding = cvae_model.word_embedding
+    bi_sent_cell = cvae_model.bi_sent_cell
+    enc_cell = cvae_model.enc_cell
+    attribute_fc1 = cvae_model.attribute_fc1
+    recog_mulogvar_net = cvae_model.recog_mulogvar_net
+    prior_mulogvar_net = cvae_model.prior_mulogvar_net
+    bow_project = cvae_model.bow_project
+    da_project = cvae_model.da_project
+    dec_init_state_net = cvae_model.dec_init_state_net
+    dec_cell = cvae_model.dec_cell
+    dec_cell_project = cvae_model.dec_cell_project
 
+    print('Debug stop position')
+
+    cvae_model.cpu()
 
 
 def test_main():

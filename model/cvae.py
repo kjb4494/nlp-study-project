@@ -4,14 +4,15 @@ import torch.nn.functional as fnn
 
 import numpy as np
 
-from model.cvae_info import CVAEModelInfo
+from model.cvae_static_info import CVAEStaticInfo
+from model.cvae_feed_info import CVAEFeedInfo
 from model.model_utils import get_bi_rnn_encode
 
 
 class CVAEModel(nn.Module):
     def __init__(self, model_config, vocab_class):
         super(CVAEModel, self).__init__()
-        self.info = CVAEModelInfo(model_config=model_config, vocab_class=vocab_class)
+        self.info = CVAEStaticInfo(model_config=model_config, vocab_class=vocab_class)
 
         # Tensor Value For Parameters() in Optimizer
         self.topic_embedding = self.info.topic_embedding
@@ -30,18 +31,44 @@ class CVAEModel(nn.Module):
 
     # arg: torch DataLoader
     def forward(self, feed_dict):
-        is_train = feed_dict['is_train']
-        is_train_multiple = feed_dict.get('is_train_multiple', False)
-        is_test_multi_da = feed_dict.get('is_test_multi_da', True)
-        num_samples = feed_dict['num_samples']
+        cvae_feed_info = CVAEFeedInfo(info=self.info, feed_dict=feed_dict)
 
-        # if is_train:
-        #     model_output =
+    def feed_inference(self, feed_dict):
+        is_test_multi_da = feed_dict.get("is_test_multi_da", True)
+        num_samples = feed_dict["num_samples"]
+        context_lens, input_contexts, floors, topics, my_profile, ot_profile = self.info.get_converted_info_to_device_context(
+            feed_dict)
+        relation_embedded = self.topic_embedding(topics)
+        local_batch_size = input_contexts.size(0)
+        max_dialog_len = input_contexts.size(1)
+        max_seq_len = input_contexts.size(-1)
+
+        enc_last_state = self.info.get_encoder_state(
+            input_contexts=input_contexts,
+            floors=floors,
+            is_train=True,
+            context_lens=context_lens,
+            max_dialog_len=max_dialog_len,
+            max_seq_len=max_seq_len
+        )
+
+        cond_list = [relation_embedded, my_profile, ot_profile, enc_last_state]
+        cond_embedding = torch.cat(cond_list, 1)
+
+        prior_sample_result = self.info.get_sample_from_prior_network(cond_embedding, num_samples)
+        latent_samples, prior_mu, prior_logvar, prior_mulogvar = prior_sample_result
+
+        dec_input_pack = self.info.get_dec_input_test(local_batch_size, cond_embedding, latent_samples)
+        ctrl_attribute_embeddings = {
+            da: self.info.da_embedding(torch.ones(local_batch_size, dtype=torch.long, device=self.info.device) * idx)
+            for idx, da in enumerate(self.info.da_vocab)
+        }
+        dec_outss = []
+        ctrl_dec_outs = {}
+        dec_outs, _, final_ctx_state = inf
 
     # 리팩토링이 절실한 부분 - 리턴 데이터가 더러움
-    def feed_train(self, feed_dict):
-        is_train_multiple = feed_dict.get('is_train_multiple', False)
-        num_samples = feed_dict['num_samples']
+    def feed_train(self):
         context_lens, input_contexts, floors, topics, my_profile, ot_profile = self.info.get_converted_info_to_device_context(
             feed_dict)
         out_tok, out_das, output_lens = self.info.get_converted_info_to_device_output(feed_dict)
@@ -83,31 +110,3 @@ class CVAEModel(nn.Module):
 
         prior_sample_result = self._sample_from_prior_network(cond_embedding, num_samples)
         _, prior_mu, prior_logvar, prior_mulogvar = prior_sample_result
-
-        def get_dec_input_test():
-            gen_inputs = [torch.cat([cond_embedding, latent_sample], 1) for latent_sample in latent_samples]
-            bow_logit = self.bow_project(gen_inputs[0])
-            if self.info.use_hcf:
-                da_logits = [self.da_project(gen_input) for gen_input in gen_inputs]
-                da_probs = [fnn.softmax(da_logits, dim=1) for da_logit in da_logits]
-                pred_attribute_embeddings = [torch.matmul(da_prob, self.da_embedding.weight) for da_prob in da_probs]
-                dec_inputs = [
-                    torch.cat((gen_input, pred_attribute_embeddings[i]), 1) for i, gen_input in enumerate(gen_inputs)
-                ]
-            else:
-                da_logits = [gen_input.new_zeros(local_batch_size, self.info.da_size) for gen_input in gen_inputs]
-                dec_inputs = gen_inputs
-
-            # decoder
-            if self.info.num_layer > 1:
-                dec_init_states = [
-                    [self.info.dec_init_state_net[i](dec_input) for i in range(self.info.num_layer)]
-                    for dec_input in dec_inputs
-                ]
-                dec_init_states = [torch.stack(dec_init_state) for dec_init_state in dec_init_states]
-            else:
-                dec_init_states = [self.info.dec_init_state_net(dec_input).unsqueeze(0) for dec_input in dec_inputs]
-
-            return da_logits, bow_logit, dec_inputs, dec_init_states, pred_attribute_embeddings
-
-        da_logits, bow_logit, dec_inputs, dec_init_states, pred_attribute_embeddings = get_dec_input_test()
