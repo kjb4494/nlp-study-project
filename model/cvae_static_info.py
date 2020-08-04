@@ -3,7 +3,8 @@ import torch.nn as nn
 import numpy as np
 import torch.nn.functional as fnn
 
-from model.model_utils import get_bi_rnn_encode, dynamic_rnn, sample_gaussian
+from model.cvae_feed_info import CVAEFeedInfo
+from model.model_utils import get_bi_rnn_encode, dynamic_rnn
 
 
 class CVAEStaticInfo:
@@ -132,29 +133,46 @@ class CVAEStaticInfo:
         )
         self.dec_cell_project = nn.Linear(self.dec_cell_size, self.vocab_size)
 
-    def get_dec_input_test(self, local_batch_size, cond_embedding, latent_samples):
-        gen_inputs = [torch.cat([cond_embedding, latent_sample], 1) for latent_sample in latent_samples]
-        bow_logit = self.bow_project(gen_inputs[0])
+    def get_encoder_state(self, f_info: CVAEFeedInfo):
+        input_contexts = f_info.input_contexts.view(-1, f_info.max_seq_len)
+        relation_embedded = self.topic_embedding(f_info.topics)
+        input_embedded = self.word_embedding(input_contexts)
 
-        if self.use_hcf:
-            da_logits = [self.da_project(gen_input) for gen_input in gen_inputs]
-            da_probs = [fnn.softmax(da_logit, dim=1) for da_logit in da_logits]
-            pred_attribute_embeddings = [torch.matmul(da_prob, self.da_embedding.weight) for da_prob in da_probs]
-            dec_inputs = [
-                torch.cat((gen_input, pred_attribute_embeddings[i]), 1) for i, gen_input in enumerate(gen_inputs)
-            ]
+        if self.sent_type == 'bi-rnn':
+            input_embedding, sent_size = get_bi_rnn_encode(
+                embedding=input_embedded,
+                cell=self.bi_sent_cell,
+                max_len=self.max_tokenized_sent_size
+            )
         else:
-            da_logits = [gen_input.new_zeros(local_batch_size, self.da_size) for gen_input in gen_inputs]
-            dec_inputs = gen_inputs
-            pred_attribute_embeddings = []
+            raise ValueError("unk sent_type. select one in [bow, rnn, bi-rnn]")
 
-        # decoder
+        input_embedding = input_embedding.view(-1, f_info.max_dialog_len, sent_size)
+
+        if self.keep_prob < 1.0:
+            input_embedding = fnn.dropout(input_embedding, 1 - self.keep_prob, f_info.is_train)
+
+        floor_one_hot = f_info.floors.new_zeros((f_info.floors.numel(), 2), dtype=torch.float)
+        floor_one_hot.data.scatter_(1, f_info.floors.view(-1, 1), 1)
+        floor_one_hot = floor_one_hot.view(-1, f_info.max_dialog_len, 2)
+
+        joint_embedding = torch.cat([input_embedding, floor_one_hot], 2)
+        _, enc_last_state = dynamic_rnn(
+            cell=self.enc_cell,
+            inputs=joint_embedding,
+            sequence_length=f_info.context_lens,
+            max_len=self.max_tokenized_sent_size
+        )
+
         if self.num_layer > 1:
-            dec_init_states = [
-                [self.dec_init_state_net[i](dec_input) for i in range(self.num_layer)] for dec_input in dec_inputs
-            ]
-            dec_init_states = [torch.stack(dec_init_state) for dec_init_state in dec_init_states]
+            enc_last_state = torch.cat([_ for _ in torch.unbind(enc_last_state)], 1)
         else:
-            dec_init_states = [self.dec_init_state_net(dec_input).unsqueeze(0) for dec_input in dec_inputs]
+            enc_last_state = enc_last_state.squeeze(0)
 
-        return da_logits, bow_logit, dec_inputs, dec_init_states, pred_attribute_embeddings
+        return enc_last_state
+
+    def get_dec_input_train(self):
+        pass
+
+    def get_dec_input_test(self):
+        pass
