@@ -3,10 +3,10 @@ import torch
 
 class SentPack:
     def __init__(
-            self, output_sentences, ctrl_output_sents, sampled_output_sents, output_logits,
+            self, output_sents, ctrl_output_sents, sampled_output_sents, output_logits,
             real_output_sents, real_output_logits, input_context_sents
     ):
-        self.output_sentences = output_sentences
+        self.output_sents = output_sents
         self.ctrl_output_sents = ctrl_output_sents
         self.sampled_output_sents = sampled_output_sents
         self.output_logits = output_logits
@@ -19,7 +19,7 @@ def index2sent(input_contexts, context_lens, model_output, feed_real, eos_id, vo
     dec_out = model_output["dec_out"].cpu()
     dec_outss = [e.cpu() for e in model_output["dec_outss"]]
     ctrl_dec_out = model_output["ctrl_dec_out"]
-    ctrl_dec_out = {k: v.cpu() for (k, v) in ctrl_dec_out.items()}
+    ctrl_dec_out = {k: v.cpu() for k, v in ctrl_dec_out.items()}
     da_logits = model_output["da_logit"].cpu()
     input_contexts = input_contexts.cpu()
     context_lens = context_lens.cpu()
@@ -126,7 +126,7 @@ def index2sent(input_contexts, context_lens, model_output, feed_real, eos_id, vo
             real_output_logits.append(da_word)
 
     return SentPack(
-        output_sentences=output_sentences,
+        output_sents=output_sentences,
         ctrl_output_sents=ctrl_output_sents,
         sampled_output_sents=sampled_output_sents,
         output_logits=output_logits,

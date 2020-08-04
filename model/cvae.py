@@ -1,12 +1,8 @@
-import torch
+
 import torch.nn as nn
-import torch.nn.functional as fnn
-
-import numpy as np
-
 from model.cvae_static_info import CVAEStaticInfo
 from model.cvae_feed_info import CVAEFeedInfo
-from model.model_utils import get_bi_rnn_encode
+from model.index2sent import SentPack, index2sent
 
 
 class CVAEModel(nn.Module):
@@ -34,6 +30,32 @@ class CVAEModel(nn.Module):
         device = self.s_info.device
         f_info = CVAEFeedInfo(feed_dict, device)
         if f_info.is_train:
-            f_info.feed_train(s_info=self.s_info)
+            model_output: dict = f_info.get_feed_train(s_info=self.s_info)
         else:
-            f_info.feed_inference(s_info=self.s_info)
+            model_output: dict = f_info.get_feed_inference(s_info=self.s_info)
+            model_output.update({
+                'out_token': f_info.out_tok,
+                'out_das': f_info.out_das
+            })
+
+        sent_pack: SentPack = index2sent(
+            input_contexts=f_info.input_contexts,
+            context_lens=f_info.context_lens,
+            model_output=model_output,
+            feed_real=True,
+            eos_id=self.s_info.eos_id,
+            vocab=self.s_info.vocab,
+            da_vocab=self.s_info.da_vocab
+        )
+
+        model_output.update({
+            'output_sents': sent_pack.output_sents,
+            'ctrl_output_sents': sent_pack.ctrl_output_sents,
+            'sampled_output_sents': sent_pack.sampled_output_sents,
+            'output_das': sent_pack.output_logits,
+            'real_output_sents': sent_pack.real_output_sents,
+            'real_output_das': sent_pack.real_output_logits,
+            'context_sents': sent_pack.input_context_sents
+        })
+
+        return model_output

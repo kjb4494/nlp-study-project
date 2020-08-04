@@ -170,9 +170,3 @@ class CVAEStaticInfo:
             enc_last_state = enc_last_state.squeeze(0)
 
         return enc_last_state
-
-    def get_dec_input_train(self):
-        pass
-
-    def get_dec_input_test(self):
-        pass
