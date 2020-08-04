@@ -54,7 +54,7 @@ class CVAEFeedInfo:
         sp.set_from_recog_network(cond_embedding, output_embedding)
         sp.set_from_prior_network(cond_embedding)
 
-        dip = DecodeInputPack()
+        dip = DecodeInputPack(s_info=s_info, f_info=self)
         dip.set_for_train(
             sp=sp,
             local_batch_size=self.local_batch_size,
