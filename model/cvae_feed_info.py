@@ -55,12 +55,7 @@ class CVAEFeedInfo:
         sp.set_from_prior_network(cond_embedding)
 
         dip = DecodeInputPack(s_info=s_info, f_info=self)
-        dip.set_for_train(
-            sp=sp,
-            local_batch_size=self.local_batch_size,
-            cond_embedding=cond_embedding,
-            is_train_multiple=self.is_train_multiple
-        )
+        dip.set_for_train(sp=sp, cond_embedding=cond_embedding)
 
         dec_outss = []
         ctrl_dec_outs = {}
@@ -137,12 +132,8 @@ class CVAEFeedInfo:
         sp = Sample(s_info=s_info, f_info=self)
         sp.set_from_prior_network(cond_embedding)
 
-        dip = DecodeInputPack()
-        dip.set_for_test(
-            sp=sp,
-            local_batch_size=self.local_batch_size,
-            cond_embedding=cond_embedding
-        )
+        dip = DecodeInputPack(s_info=s_info, f_info=self)
+        dip.set_for_test(sp=sp, cond_embedding=cond_embedding)
 
         sp.ctrl_attribute_embeddings = {
             da: s_info.da_embedding(torch.ones(self.local_batch_size, dtype=torch.long, device=s_info.device) * idx)

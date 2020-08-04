@@ -24,7 +24,7 @@ class DecodeInputPack:
         self.s_info = s_info
         self.f_info = f_info
 
-    def set_for_train(self, sp: Sample, local_batch_size, cond_embedding, is_train_multiple):
+    def set_for_train(self, sp: Sample, cond_embedding):
         gen_inputs = [torch.cat([cond_embedding, latent_sample], 1) for latent_sample in sp.latent_samples]
         bow_logit = self.s_info.bow_project(gen_inputs[0])
         ctrl_dec_inputs = {}
@@ -32,8 +32,6 @@ class DecodeInputPack:
 
         if self.s_info.use_hcf:
             da_logits = [self.s_info.da_project(gen_input) for gen_input in gen_inputs]
-            da_probs = [fnn.softmax(da_logit, dim=1) for da_logit in da_logits]
-
             selected_attr_embedding = sp.attribute_embedding
             dec_inputs = [torch.cat((gen_input, selected_attr_embedding), 1) for gen_input in gen_inputs]
 
@@ -46,7 +44,7 @@ class DecodeInputPack:
                     for k in ctrl_gen_inputs.keys()
                 }
         else:
-            da_logits = [gen_input.new_zeros(local_batch_size, self.s_info.da_size)
+            da_logits = [gen_input.new_zeros(self.f_info.local_batch_size, self.s_info.da_size)
                          for gen_input in gen_inputs]
             dec_inputs = gen_inputs
 
@@ -77,8 +75,7 @@ class DecodeInputPack:
         self.ctrl_dec_inputs = ctrl_dec_inputs
         self.ctrl_dec_init_states = ctrl_dec_init_states
 
-    def set_for_test(self, sp: Sample, local_batch_size, cond_embedding):
-        # _get_dec_input_test
+    def set_for_test(self, sp: Sample, cond_embedding):
         pass
 
 
