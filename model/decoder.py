@@ -76,7 +76,36 @@ class DecodeInputPack:
         self.ctrl_dec_init_states = ctrl_dec_init_states
 
     def set_for_test(self, sp: Sample, cond_embedding):
-        pass
+        gen_inputs = [torch.cat([cond_embedding, latent_sample], 1) for latent_sample in sp.latent_samples]
+        bow_logit = self.s_info.bow_project(gen_inputs[0])
+
+        if self.s_info.use_hcf:
+            da_logits = [self.s_info.da_project(gen_input) for gen_input in gen_inputs]
+            da_probs = [fnn.softmax(da_logit, dim=1) for da_logit in da_logits]
+            pred_attribute_embeddings = [torch.matmul(da_prob, self.s_info.da_embedding.weight) for da_prob in da_probs]
+            selected_attr_embedding = pred_attribute_embeddings
+            dec_inputs = [torch.cat((gen_input, selected_attr_embedding[i]), 1) for i, gen_input in enumerate(gen_inputs)]
+        else:
+            da_logits = [gen_input.new_zeros(self.f_info.local_batch_size, self.s_info.da_size)
+                         for gen_input in gen_inputs]
+            pred_attribute_embeddings = []
+            dec_inputs = gen_inputs
+
+        # decoder
+        if self.s_info.num_layer > 1:
+            dec_init_states = [
+                [self.s_info.dec_init_state_net[i](dec_input) for i in range(self.s_info.num_layer)]
+                for dec_input in dec_inputs
+            ]
+        else:
+            dec_init_states = [self.s_info.dec_init_state_net(dec_input).unsqueeze(0) for dec_input in dec_inputs]
+
+        # Setting results
+        self.da_logits = da_logits
+        self.bow_logit = bow_logit
+        self.dec_inputs = dec_inputs
+        self.dec_init_states = dec_init_states
+        self.pred_attribute_embeddings = pred_attribute_embeddings
 
 
 def inference_loop(cell, output_fn, embeddings, encoder_state, start_of_sequence_id,
