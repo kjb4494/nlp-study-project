@@ -1,7 +1,4 @@
 import torch
-
-from model.cvae_static_info import CVAEStaticInfo
-from model.cvae_feed_info import CVAEFeedInfo
 from model.model_utils import sample_gaussian
 
 
@@ -25,7 +22,7 @@ class Sample:
     prior_mu = None
     prior_logvar = None
 
-    def __init__(self, s_info: CVAEStaticInfo, f_info: CVAEFeedInfo):
+    def __init__(self, s_info, f_info):
         self.s_info = s_info
         self.f_info = f_info
 

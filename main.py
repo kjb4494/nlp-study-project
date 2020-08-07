@@ -1,4 +1,3 @@
-import os
 import utils
 from torch.utils.data import DataLoader
 from data_api.cvae_corpus import KGCVAECorpus

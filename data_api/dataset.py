@@ -62,7 +62,7 @@ class CVAEDataset(Dataset):
                     'topics': torch.LongTensor([topic]),
                     'my_profile': torch.FloatTensor(vec_a_meta) if or_vec_caller == 0 else torch.FloatTensor(vec_b_meta),
                     'ot_profile': torch.FloatTensor(vec_b_meta) if or_vec_caller == 0 else torch.FloatTensor(vec_a_meta),
-                    'context_size': torch.LongTensor([len(in_row)]),
+                    'context_lens': torch.LongTensor([len(in_row)]),
                     'context_utts': torch.LongTensor(context_tokenized_sents),
                     'floors': torch.LongTensor(callers),
                     'out_utts': torch.LongTensor(padded_vec_tokenized_sents[0]),

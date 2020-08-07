@@ -1,6 +1,5 @@
 import torch
 import torch.nn.functional as fnn
-from model.cvae_static_info import CVAEStaticInfo
 from model.model_utils import get_bi_rnn_encode
 from model.sample import Sample
 from model.decoder import DecodeInputPack, inference_loop, train_loop
@@ -33,7 +32,7 @@ class CVAEFeedInfo:
         self.max_dialog_len = self.input_contexts.size(1)
         self.max_seq_len = self.input_contexts.size(-1)
 
-    def get_feed_train(self, s_info: CVAEStaticInfo):
+    def get_feed_train(self, s_info):
         output_embedded = s_info.word_embedding(self.out_tok)
         if s_info.sent_type == 'bi-rnn':
             output_embedding, _ = get_bi_rnn_encode(
@@ -122,7 +121,7 @@ class CVAEFeedInfo:
         }
         return model_output
 
-    def get_feed_inference(self, s_info: CVAEStaticInfo):
+    def get_feed_inference(self, s_info):
         relation_embedded = s_info.topic_embedding(self.topics)
         enc_last_state = s_info.get_encoder_state(f_info=self)
 

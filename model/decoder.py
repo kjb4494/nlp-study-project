@@ -1,8 +1,6 @@
 import torch
 import torch.nn.functional as fnn
 from model.sample import Sample
-from model.cvae_static_info import CVAEStaticInfo
-from model.cvae_feed_info import CVAEFeedInfo
 from .model_utils import dynamic_rnn
 
 
@@ -20,7 +18,7 @@ class DecodeInputPack:
     # For Test
     pred_attribute_embeddings = None
 
-    def __init__(self, s_info: CVAEStaticInfo, f_info: CVAEFeedInfo):
+    def __init__(self, s_info, f_info):
         self.s_info = s_info
         self.f_info = f_info
 

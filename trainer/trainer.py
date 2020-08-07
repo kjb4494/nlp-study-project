@@ -12,7 +12,7 @@ class CVAETrainer:
     # model: nn.Module --> 파이썬의 정적 타입 선언 문법임
     def __init__(self, config, model):
         self.model = model
-        self.da_types = model.info.da_vocab
+        self.da_types = model.s_info.da_vocab
 
         self.device = config['device']
         self.train_outputs = config['train_output']
