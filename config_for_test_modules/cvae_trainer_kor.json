@@ -1,5 +1,5 @@
 {
-  "output_dir_path": "output_kor",
+  "output_dir_path": "output",
   "log_dirname": "log",
   "model_dirname": "model",
   "test_dirname": "test",

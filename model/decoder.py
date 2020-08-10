@@ -95,6 +95,7 @@ class DecodeInputPack:
                 [self.s_info.dec_init_state_net[i](dec_input) for i in range(self.s_info.num_layer)]
                 for dec_input in dec_inputs
             ]
+            dec_init_states = [torch.stack(dec_init_state) for dec_init_state in dec_init_states]
         else:
             dec_init_states = [self.s_info.dec_init_state_net(dec_input).unsqueeze(0) for dec_input in dec_inputs]
 

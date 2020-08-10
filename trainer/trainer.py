@@ -148,7 +148,7 @@ class CVAETrainer:
             is_train=True,
             is_valid=False
         )
-        self.update_gradient(loss=loss)
+        self.update_gradient(loss=loss['main_loss'])
         return {
             'model_output': recorded_model_output,
             'loss': loss

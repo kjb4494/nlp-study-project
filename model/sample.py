@@ -74,15 +74,15 @@ class Sample:
         else:
             latent_samples = [sample_gaussian(recog_mu, recog_logvar)]
 
-        self.latent_samples = latent_samples,
-        self.recog_mu = recog_mu,
-        self.recog_logvar = recog_logvar,
-        self.recog_mulogvar = recog_mulogvar,
-        self.ctrl_latent_samples = ctrl_latent_samples,
-        self.ctrl_recog_mus = ctrl_recog_mus,
-        self.ctrl_recog_logvars = ctrl_recog_logvars,
-        self.ctrl_recog_mulogvars = ctrl_recog_mulogvars,
-        self.attribute_embedding = attribute_embedding,
+        self.latent_samples = latent_samples
+        self.recog_mu = recog_mu
+        self.recog_logvar = recog_logvar
+        self.recog_mulogvar = recog_mulogvar
+        self.ctrl_latent_samples = ctrl_latent_samples
+        self.ctrl_recog_mus = ctrl_recog_mus
+        self.ctrl_recog_logvars = ctrl_recog_logvars
+        self.ctrl_recog_mulogvars = ctrl_recog_mulogvars
+        self.attribute_embedding = attribute_embedding
         self.ctrl_attribute_embeddings = ctrl_attribute_embeddings
 
         self._is_set_from_recog_network = True
