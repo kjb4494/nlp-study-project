@@ -72,7 +72,8 @@ class CVAEStaticInfo:
             hidden_size=self.ctx_cell_size,
             num_layers=self.num_layer,
             dropout=0,
-            bidirectional=False
+            bidirectional=False,
+            batch_first=True
         )
 
         # nn.Linear args --> input size, output size, bias(default true)
@@ -129,7 +130,8 @@ class CVAEStaticInfo:
             hidden_size=self.dec_cell_size,
             num_layers=self.num_layer,
             dropout=1 - self.keep_prob,
-            bidirectional=False
+            bidirectional=False,
+            batch_first=True
         )
         self.dec_cell_project = nn.Linear(self.dec_cell_size, self.vocab_size)
 
