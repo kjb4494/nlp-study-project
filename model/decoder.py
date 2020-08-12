@@ -118,7 +118,7 @@ def inference_loop(cell, output_fn, embeddings, encoder_state, start_of_sequence
     for time in range(maximum_length):
         if cell_output is None:
             next_input_id = encoder_state.new_full((batch_size,), start_of_sequence_id, dtype=torch.long)
-            done = encoder_state.new_zeros(batch_size, dtype=torch.uint8)
+            done = encoder_state.new_zeros(batch_size, dtype=torch.bool)
             cell_state = encoder_state
         else:
             cell_output = output_fn(cell_output)
@@ -131,7 +131,7 @@ def inference_loop(cell, output_fn, embeddings, encoder_state, start_of_sequence
                 next_input_id = torch.max(cell_output, 1)[1]
             else:
                 raise ValueError('unknown decode type')
-            next_input_id = next_input_id * (~done).long()  # ???
+            next_input_id = next_input_id * (~done).long()
             done = (next_input_id == end_of_sequence_id) | done
             context_state.append(next_input_id)
 
