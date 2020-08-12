@@ -97,7 +97,7 @@ class CVAEFeedInfo:
                     cell=s_info.dec_cell,
                     output_fn=s_info.dec_cell_project,
                     embeddings=s_info.word_embedding,
-                    encoder_state=dip.dec_init_states[key],
+                    encoder_state=dip.ctrl_dec_init_states[key],
                     start_of_sequence_id=s_info.go_id,
                     end_of_sequence_id=s_info.eos_id,
                     maximum_length=s_info.max_tokenized_sent_size,
